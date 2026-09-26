@@ -1,0 +1,44 @@
+name: smoke-test-action
+description: Wait until a deployed service reports the expected commit, then run its smoke-test script with shared helpers.
+branding:
+  icon: check-circle
+  color: green
+
+inputs:
+  url:
+    description: Base URL of the deployed service
+    required: true
+  expected-sha:
+    description: Commit the service must report before tests run
+    default: ${{ github.sha }}
+  health-path:
+    description: Path of the endpoint that returns the commit header
+    default: /healthcheck
+  sha-header:
+    description: Response header carrying the deployed commit
+    default: X-Git-Sha
+  wait-seconds:
+    description: How long to wait for the new version to go live
+    default: "60"
+  script:
+    description: Service smoke-test script, relative to the workspace; receives the URL as $1
+    default: scripts/smoke_test.sh
+
+runs:
+  using: composite
+  steps:
+    - name: Wait for new version
+      shell: bash
+      run: |
+        "$GITHUB_ACTION_PATH/wait-for-sha.sh" \
+          "${{ inputs.url }}${{ inputs.health-path }}" \
+          "${{ inputs.expected-sha }}" \
+          "${{ inputs.wait-seconds }}" \
+          "${{ inputs.sha-header }}"
+
+    - name: Smoke test
+      shell: bash
+      env:
+        APP_SMOKE_TEST_LIB: ${{ github.action_path }}/lib.sh
+        EXPECTED_SHA: ${{ inputs.expected-sha }}
+      run: bash "${{ inputs.script }}" "${{ inputs.url }}"
