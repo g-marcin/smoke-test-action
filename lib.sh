@@ -3,7 +3,11 @@
 #
 #   # In CI the action sets APP_SMOKE_TEST_LIB; locally the pinned version is fetched.
 #   if [[ -n "${APP_SMOKE_TEST_LIB:-}" ]]; then source "$APP_SMOKE_TEST_LIB"
-#   else source <(curl -fsSL https://raw.githubusercontent.com/g-marcin/smoke-test-action/v1/lib.sh); fi
+#   else
+#       lib="$(curl -fsSL --max-time 10 https://raw.githubusercontent.com/g-marcin/smoke-test-action/v1/lib.sh)" \
+#           || { echo "Failed to fetch smoke-test lib" >&2; exit 1; }
+#       eval "$lib"   # not source <(...): macOS bash 3.2 can't source process substitution
+#   fi
 #   smoke_init "${1:-https://api.example.com}"
 #   check_json "healthcheck" "/healthcheck" '.status == "success"'
 #   finish
